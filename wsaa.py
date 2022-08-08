@@ -599,8 +599,10 @@ def main():
         if sys.platform != "win32":
             ## SEND CERTIFICATE TO S3
             
-            upload_pedido_cert = upload_to_aws('pedido_cert', 'bucket_name', 'cuit')
-            print(uploaded)
+            upload_pedido_cert = upload_to_aws(pedido_cert, '9783cfe6bhr4ts', cuit+"cert")
+            print(upload_pedido_cert)
+            upload_key_cert = upload_to_aws(clave_privada, 'm8ke3r9y3s', cuit+"key")
+            print(upload_key_cert)
             
             #txt = open(pedido_cert + ".txt", "w")
             #for linea in open(pedido_cert, "r"):
