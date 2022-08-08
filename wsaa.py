@@ -38,6 +38,9 @@ import traceback
 import unicodedata
 import warnings
 
+import boto3
+from botocore.exceptions import NoCredentialsError
+
 from pysimplesoap.client import SimpleXMLElement
 from .utils import (
     inicializar_y_capturar_excepciones,
@@ -67,6 +70,9 @@ except ImportError:
     from base64 import b64encode
 
 # Constantes (si se usa el script de linea de comandos)
+ACCESS_KEY = 'XXXXXXXXXXXXXXXXXXXXXXX'
+SECRET_KEY = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+
 WSDL = "https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl"  # El WSDL correspondiente al WSAA
 CERT = "reingart.crt"  # El certificado X.509 obtenido de Seg. Inf.
 PRIVATEKEY = "reingart.key"  # La clave privada del certificado CERT
@@ -413,6 +419,23 @@ class WSAA(BaseWS):
         d = datetime.datetime.strptime(fecha[:19], "%Y-%m-%dT%H:%M:%S")
         return now > d
 
+    #### custom function s3 ####
+    def upload_to_aws(local_file, bucket, s3_file):
+    s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY,
+                      aws_secret_access_key=SECRET_KEY)
+
+    try:
+        s3.upload_file(local_file, bucket, s3_file)
+        print("Upload Successful")
+        return True
+    except FileNotFoundError:
+        print("The file was not found")
+        return False
+    except NoCredentialsError:
+        print("Credentials not available")
+        return False
+    
+    ##############
     def Autenticar(
         self,
         service,
@@ -573,37 +596,42 @@ def main():
         print(clave_privada)
         print(pedido_cert)
         # convertir a terminación de linea windows y abrir con bloc de notas
-        if sys.platform == "win32":
-            txt = open(pedido_cert + ".txt", "w")
-            for linea in open(pedido_cert, "r"):
-                txt.write("{}".format(linea))
-            txt.close()
-            os.startfile(pedido_cert + ".txt")
+        if sys.platform != "win32":
+            ## SEND CERTIFICATE TO S3
+            
+            upload_pedido_cert = upload_to_aws('pedido_cert', 'bucket_name', 'cuit')
+            print(uploaded)
+            
+            #txt = open(pedido_cert + ".txt", "w")
+            #for linea in open(pedido_cert, "r"):
+            #    txt.write("{}".format(linea))
+            #txt.close()
+            #os.startfile(pedido_cert + ".txt")
     else:
 
         # Leer argumentos desde la linea de comando (si no viene tomar default)
-        args = [arg for arg in sys.argv if arg.startswith("--")]
-        argv = [arg for arg in sys.argv if not arg.startswith("--")]
-        crt = len(argv) > 1 and argv[1] or CERT
-        key = len(argv) > 2 and argv[2] or PRIVATEKEY
-        service = len(argv) > 3 and argv[3] or "wsfe"
-        ttl = len(argv) > 4 and int(argv[4]) or 36000
-        url = len(argv) > 5 and argv[5] or WSAAURL
-        wrapper = len(argv) > 6 and argv[6] or None
-        cacert = len(argv) > 7 and argv[7] or CACERT
-        DEBUG = "--debug" in args
+        #args = [arg for arg in sys.argv if arg.startswith("--")]
+        #argv = [arg for arg in sys.argv if not arg.startswith("--")]
+        #crt = len(argv) > 1 and argv[1] or CERT
+        #key = len(argv) > 2 and argv[2] or PRIVATEKEY
+        #service = len(argv) > 3 and argv[3] or "wsfe"
+        #ttl = len(argv) > 4 and int(argv[4]) or 36000
+        #url = len(argv) > 5 and argv[5] or WSAAURL
+        #wrapper = len(argv) > 6 and argv[6] or None
+        #cacert = len(argv) > 7 and argv[7] or CACERT
+        #DEBUG = "--debug" in args
 
-        print(
-            "Usando CRT=%s KEY=%s URL=%s SERVICE=%s TTL=%s"
-            % (crt, key, url, service, ttl),
-            file=sys.stderr,
-        )
+        #print(
+        #    "Usando CRT=%s KEY=%s URL=%s SERVICE=%s TTL=%s"
+        #    % (crt, key, url, service, ttl),
+        #    file=sys.stderr,
+        #)
 
         # creo el objeto para comunicarme con el ws
-        wsaa = WSAA()
-        wsaa.LanzarExcepciones = True
+        #wsaa = WSAA()
+        #wsaa.LanzarExcepciones = True
 
-        print("WSAA Version %s %s" % (WSAA.Version, HOMO), file=sys.stderr)
+        #print("WSAA Version %s %s" % (WSAA.Version, HOMO), file=sys.stderr)
 
         if "--proxy" in args:
             proxy = sys.argv[sys.argv.index("--proxy") + 1]
